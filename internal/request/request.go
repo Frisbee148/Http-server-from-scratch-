@@ -25,13 +25,13 @@ func (r *RequestLine) ValidHttp() bool {
 	return r.HttpVersion == "HTTP/1.1"
 }
 
-func parseRequestLine(b []byte) (*RequestLine, []byte, error) {
-	idx := strings.Index(string(b), SEPARATOR)
+func parseRequestLine(b string) (*RequestLine, string, error) {
+	idx := strings.Index(b, SEPARATOR)
 	if idx == -1 {
 		return nil, b, nil
 	}
 
-	startLine := string(b[:idx])
+	startLine := b[:idx]
 	restOfMsg := b[idx+len(SEPARATOR):]
 
 	parts := strings.Split(startLine, " ")
@@ -58,7 +58,7 @@ func RequestFromReader(reader io.Reader) (*Request, error) {
 		return nil, fmt.Errorf("unable to io.ReadAll: %w", err)
 	}
 
-	rl, _, err := parseRequestLine(data)
+	rl, _, err := parseRequestLine(string(data))
 	if err != nil {
 		return nil, err
 	}
