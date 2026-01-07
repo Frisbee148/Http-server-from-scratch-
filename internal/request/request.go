@@ -5,55 +5,65 @@ import (
 	"io"
 	"strings"
 )
-func (r *RequestLine)
+
 type Request struct {
 	RequestLine RequestLine
 }
 
 type RequestLine struct {
-	HttpVersion   string
-	RequestTarget string
 	Method        string
+	RequestTarget string
+	HttpVersion   string
 }
 
-var ERROr_MALFORMED_REQUEST_LINE= fmt.Errorf("malformed requestline")
-var ERROR_UNSUPPORTED_HTTP_VERSION=fmt.Errorf("unsupported http version")
-var SEPARATOR="\r\n"
+var ERROR_MALFORMED_REQUEST_LINE = fmt.Errorf("malformed request line")
+var ERROR_UNSUPPORTED_HTTP_VERSION = fmt.Errorf("unsupported http version")
 
-func parseRequestLine(b []byte) (*RequestLine, string, error) {
-	idx := strings.Index(b, SEPARATOR)
-	if idx == -1{
-		return nil,b,nil
+const SEPARATOR = "\r\n"
 
+func (r *RequestLine) ValidHttp() bool {
+	return r.HttpVersion == "HTTP/1.1"
+}
+
+func parseRequestLine(b []byte) (*RequestLine, []byte, error) {
+	idx := strings.Index(string(b), SEPARATOR)
+	if idx == -1 {
+		return nil, b, nil
 	}
-	startLine:=b[:idx]
-	restOfMsg:=b[idx+len(SEPARATOR):]
-	parts :=strings.Split(startLine," ")
-	if len(httpParts)!=2 || httpParts[0]="HTTP" || httpParts[1]!="1.1"{
-			return nil,restOfMsg,ERROR_MALFORMED_REQUEST_LINE
-		}
-		httpParts := strings.Split(startLine," ")	
-	rl:= &RequestLine{
-		Method: parts[0],
-		RequestTarget:parts[1],
-		HttpVersion: httpParts[1],
+
+	startLine := string(b[:idx])
+	restOfMsg := b[idx+len(SEPARATOR):]
+
+	parts := strings.Split(startLine, " ")
+	if len(parts) != 3 {
+		return nil, restOfMsg, ERROR_MALFORMED_REQUEST_LINE
 	}
-	if !rl.ValidHttp(){
-		return nil,restofMsg,ERROR_UNSUPPORTED_HTTP_VERSION
+
+	rl := &RequestLine{
+		Method:        parts[0],
+		RequestTarget: parts[1],
+		HttpVersion:   parts[2],
 	}
-	return rl,restOfmsg,nil 
+
+	if !rl.ValidHttp() {
+		return nil, restOfMsg, ERROR_UNSUPPORTED_HTTP_VERSION
+	}
+
+	return rl, restOfMsg, nil
 }
 
 func RequestFromReader(reader io.Reader) (*Request, error) {
-	data,err:=io.ReadAll(reader)
-	if err != nil{
-		return nil,fmt.Errorf("unable to io.ReadAll",err)
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("unable to io.ReadAll: %w", err)
 	}
-	str:=string(data)
-	rl,_,err:=parseRequestLine(str)
+
+	rl, _, err := parseRequestLine(data)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Request{
-		RequestLine: *rl
-
-	},err
-
+		RequestLine: *rl,
+	}, nil
 }
